@@ -30,12 +30,19 @@ getKey_GBIF <- function(){
   options(gbif_pwd = rstudioapi::askForPassword("GBIF password"))
   
   ## Find plant taxonkey - get list of gbif keys to filter download
-  key <- name_suggest(q = 'Plantae', rank = 'kingdom')$data$key[1] 
+  #key <- name_suggest(q = 'Plantae', rank = 'kingdom')$data$key[1] 
+  key <- c()
+  for(i in 1:length(species)){
+    key <- c(key, name_suggest(q = species[i], rank = 'species')$data$key)
+    message(paste0('Keys for ', species[i]))
+    print(name_suggest(q = species[i], rank = 'species')$data)
+    message('')
+  }
   
   ## Get download key for all occurrences of plants with coordinates in Norway
   download_key <- 
     occ_download(
-      pred('taxonKey', key),
+      pred_in('taxonKey', key),
       pred('hasCoordinate', 'TRUE'),
       pred('country', 'NO'),
       type = 'and'
