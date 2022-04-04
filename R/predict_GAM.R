@@ -9,7 +9,12 @@
 #' @param plot.pdf logical, default = `TRUE`. Whether or not to generate and
 #' save pdf plots of predictions
 #' @param save logical, default = `FALSE`. If `TRUE`, model fits for all 
-#' species are saved in the subfolder Results as `NIGAM_All.list.RData`.
+#' species are saved into the directory specified via `save_path` as 
+#' `NIGAM_All.list.rds`.
+#' @param wd_path Character string specifying the working directory containing 
+#' the "Data" and "Results" subfolders. This ensures that raster data are loaded
+#' from the "Data" folder, and that GAM fits are loaded from, and predictions 
+#' and plots saved into, the "Results" folder. 
 #'
 #' @return A list containing for each `species` and `year` the mean and standard
 #' deviation of predicted occurrence at the municipality level (stored as class
@@ -18,13 +23,13 @@
 #'
 #' @examples
 #' 
-predict_GAM <- function(species, year, plot.pdf = TRUE, save = FALSE){
+predict_GAM <- function(species, year, plot.pdf = TRUE, save = FALSE, wd_path){
   
   ## Load polygon for Norwegian counties
-  kommune.poly <- readOGR(dsn = "Data/Shapefiles", layer = "Norway municipalities", use_iconv = TRUE, encoding = "UTF-8")
+  kommune.poly <- readOGR(dsn = paste0(wd_path, "/Data/Shapefiles"), layer = "Norway municipalities", use_iconv = TRUE, encoding = "UTF-8")
   
   ## Load and set up raster for Norway
-  norway <- raster("Data/Raster/Norway.tif") 
+  norway <- raster(paste0(wd_path, "/Data/Raster/Norway.tif")) 
   xy <- coordinates(norway)
   x <- y <- norway
   values(x) <- xy[,1]
@@ -32,7 +37,7 @@ predict_GAM <- function(species, year, plot.pdf = TRUE, save = FALSE){
   
   ## Load GAM results if not already in workspace
   if(!exists("gam.results")){
-    load("Results/gam.results.all.gamma3.RData")
+    gam.results <- readRDS(wd_path, "/Results/gam.results.all.gamma3.rds")
   }
   
   ## Set up empty list to store predictions
@@ -71,7 +76,7 @@ predict_GAM <- function(species, year, plot.pdf = TRUE, save = FALSE){
     
     if(plot.pdf){
       message(paste0("Assembling pdf plot for ", species[j], "."))
-      pdf(paste0("Results/GAMplotsMunic_", species[j], ".pdf"), onefile = TRUE)
+      pdf(paste0(wd_path, "/Results/GAMplotsMunic_", species[j], ".pdf"), onefile = TRUE)
       for (plotList in plotList) {
         replayPlot(plotList)
       }
@@ -84,7 +89,7 @@ predict_GAM <- function(species, year, plot.pdf = TRUE, save = FALSE){
   
   ## Save predictions (optional)
   if(save){
-    save(NIGAM_All.list, file = "Results/NIGAM_All.list.RData")
+    saveRDS(NIGAM_All.list, file = paste0(wd_path, "/Results/NIGAM_All.list.rds"))
   }
   
   ## Return results

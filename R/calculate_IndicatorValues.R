@@ -11,25 +11,28 @@
 #' @param year vector of years for which to calculate indicator values
 #' @param save logical, default = `FALSE`. If `TRUE`, new indicator data will be
 #' saved in the working directory as `newIndicatorData.RData`.
-#'
+#'@param wd_path Character string specifying the working directory containing 
+#' the "Data" and "Results" subfolders. This ensures that all data is read from
+#' and stored in the correct locations. 
+#' 
 #' @return A list containing scaled indicator values and associated information
 #'  for each municipality per `species` and `year`.
 #' @export
 #'
 #' @examples
-calculate_IndicatorValues <- function(species, year, save = FALSE){
+calculate_IndicatorValues <- function(species, year, save = FALSE, wd_path){
   
   ## Load saved data if not present
   
   # Old indicator data
   if(!exists("oldIndicatorData")){
-    load("oldIndicatorData.RData")
+    oldIndicatorData <- readRDS(paste0(wd_path, "/Data/oldIndicatorData.rds"))
     message('Old indicator data loaded from file.')
   }
   
   # GAM predictions
   if(!exists("NIGAM_All.list")){
-    load("Results/NIGAM_All.list.RData")
+    NIGAM_All.list <- readRDS(paste0(wd_path, "/Results/NIGAM_All.list.rds"))
     message('GAM prediction data loaded from file.')
   }
   
@@ -88,7 +91,7 @@ calculate_IndicatorValues <- function(species, year, save = FALSE){
   
   ## Save new indicator data (optional)
   if(save){
-    save(newIndicatorData, file = "newIndicatorData.RData")
+    saveRDS(newIndicatorData, file = paste0(wd_path, "/Data/newIndicatorData.rds")
   }
   
   ## Return new indicator data

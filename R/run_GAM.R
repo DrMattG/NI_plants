@@ -15,16 +15,20 @@
 #' 
 #' @param species A character string or vector of character strings containing
 #' the latin name of the species for which to run the GAM
+#' #' @param data_path Character string indicating the directory in which the 
+#' training data sets are located
 #' @param save Logical, default = `TRUE`. When `TRUE`, model fits for all 
 #' species are saved in the subfolder Results as `gam.results.all.gamma3.RData`.
 #' Set to `FALSE` to skip saving of new GAM fits.
-#'
+#' @param save_path Character string indicating the directory into which to save
+#' the GAM fits
+#' 
 #' @return A list of GAM fits, one fit per species. 
 #' @export
 #'
 #' @examples
 #' 
-run_GAM <- function(species, save = TRUE){
+run_GAM <- function(species, data_path, save = TRUE, save_path){
   gam.results <- list()
 
   for(j in 1:length(species)){
@@ -33,9 +37,8 @@ run_GAM <- function(species, save = TRUE){
     message(paste0("Fitting GAM for ", species[j], " ..."))
      
     # Training data for species from GBIF, see NI 2020 plants dataprep.r
-    load(paste("Data/Regression data/", species[j], "_training_data_all.RData", sep=""))
-    #load(paste("Data/Regression data/", species[j], "_training_data_all", sep=""))
-    
+    training_data <- readRDS(paste0(data_path, "/", species[j], "_training_data_all.rds"))
+
     d <- training_data[, c("Y", "x", "y", "year", "logS")]
     m <- gam(Y ~ ti(x) + ti(y) + ti(year) + ti(x, year) + ti(y, year),
                data = d, gamma = 3, family = poisson, offset = logS, select = TRUE)
@@ -43,7 +46,7 @@ run_GAM <- function(species, save = TRUE){
   }
   
   if(save){
-    save(gam.results, file = "Results/gam.results.all.gamma3.RData")
+    saveRDS(gam.results, file = paste0(save_path, "/gam.results.all.gamma3.rds"))
   }
   
   return(gam.results)

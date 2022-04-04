@@ -16,6 +16,8 @@
 #' database.
 #' @param save Logical, default = `FALSE`. If `TRUE`, the downloaded indicator 
 #' data is saved in the workspace in a file named `OldIndicatorData.RData`. 
+#' @param save_path Character string indicating the directory into which to save
+#' the old indicator data.
 #'
 #' @return A list of objects (one per `species`) containing 1) a data frame of 
 #' the values of the values of the indicator and 2) a list of distribution 
