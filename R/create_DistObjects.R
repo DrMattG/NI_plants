@@ -7,26 +7,30 @@
 #' the latin name of the species for which to prepare data
 #' @param save logical, default = `FALSE`. If `TRUE`, indicator data will be
 #' saved in the working directory as `updatedIndicatorData.RData`.
-#'
+#'#'@param wd_path Character string specifying the working directory containing 
+#' the "Data" and "Results" subfolders. This ensures that all data is read from
+#' and stored in the correct locations. 
+#' 
 #' @return A list containing scaled indicator values and associated information,
 #' including specifications for custom distributions specifying uncertainty, for 
 #' each municipality per `species` and `year`.
 #' @export
 #'
 #' @examples
-create_DistObjects <- function(species, save = FALSE){
+create_DistObjects <- function(species, save = FALSE, wd_path){
   
   ## Load saved data if not present
   
   # Old indicator data
   if(!exists("oldIndicatorData")){
-    load("oldIndicatorData.RData")
+    oldIndicatorData <- readRDS(paste0(wd_path, "/Data/oldIndicatorData.rds"))
     message('Old indicator data loaded from file.')
   }
   
+  
   # New indicator data
   if(!exists("newIndicatorData")){
-    load("newIndicatorData.RData")
+    newIndicatorData <- readRDS(paste0(wd_path, "/Data/oldIndicatorData.rds"))
     message('New indicator data loaded from file.')
   }
   
@@ -87,7 +91,7 @@ create_DistObjects <- function(species, save = FALSE){
   
   ## Save updated indicator data (optional)
   if(save){
-    save(updatedIndicatorData, file = "updatedIndicatorData.RData")
+    saveRDS(updatedIndicatorData, file = paste0(wd_path, "/Data/updatedIndicatorData.rds"))
   }
   
   ## Return updated indicator data

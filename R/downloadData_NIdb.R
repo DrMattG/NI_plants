@@ -16,6 +16,8 @@
 #' database.
 #' @param save Logical, default = `FALSE`. If `TRUE`, the downloaded indicator 
 #' data is saved in the workspace in a file named `OldIndicatorData.RData`. 
+#' @param save_path Character string indicating the directory into which to save
+#' the old indicator data.
 #'
 #' @return A list of objects (one per `species`) containing 1) a data frame of 
 #' the values of the values of the indicator and 2) a list of distribution 
@@ -24,7 +26,7 @@
 #'
 #' @examples
 #' 
-downloadData_NIdb <- function(species, indicators, save = FALSE){
+downloadData_NIdb <- function(species, indicators, save = FALSE, save_path){
 
   ## Provide user credentials for NI database and request token
   UserName_NIdb <- rstudioapi::askForPassword("NI database username") # = NINA email address
@@ -49,7 +51,7 @@ downloadData_NIdb <- function(species, indicators, save = FALSE){
   
   ## Save indicator data (optional)
   if(save){
-    save(oldIndicatorData, file = "oldIndicatorData.RData")
+    saveRDS(oldIndicatorData, file = paste0(save_path, "/oldIndicatorData.rds"))
   }
 
   ## Return indicator data

@@ -33,12 +33,15 @@
 #' `mode = "compare"` updated indicator data is compared to indicator data 
 #' currently stored in the NI database. If `mode = "overwrite"`, updated 
 #' indicator data is uploaded to the NI database. 
-#'
+#' @param newdata_path Character string specifying the directory in which the 
+#' newly calculated indicator data (output of `NI_plants::create_DistObjects()`)
+#' is stored. 
+#' 
 #' @return
 #' @export
 #'
 #' @examples
-uploadData_NIdb <- function(species, speciesList, mode){
+uploadData_NIdb <- function(species, speciesList, mode, newdata_path){
   
   if(!(mode%in%c("overwrite", "compare"))){
     stop("Incorrect mode specification. See documentation for supported modes.")
@@ -48,7 +51,7 @@ uploadData_NIdb <- function(species, speciesList, mode){
   
   # Updated indicator data
   if(!exists("updatedIndicatorData")){
-    load("updatedIndicatorData.RData")
+    updatedIndicatorData <- readRDS(paste0(newdata_path, "/updatedIndicatorData.rds"))
     message('Updated indicator data loaded from file.')
   }
   
