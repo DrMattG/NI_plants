@@ -24,13 +24,7 @@
 #' @examples
 getKey_GBIF <- function(){
   
-  ## Provide user credentials for GBIF
-  options(gbif_user = rstudioapi::askForPassword("GBIF username"))
-  options(gbif_email = rstudioapi::askForPassword("Registered GBIF e-mail"))
-  options(gbif_pwd = rstudioapi::askForPassword("GBIF password"))
-  
   ## Find plant taxonkey - get list of gbif keys to filter download
-  #key <- name_suggest(q = 'Plantae', rank = 'kingdom')$data$key[1] 
   key <- c()
   for(i in 1:length(species)){
     key <- c(key, name_suggest(q = species[i], rank = 'species')$data$key)
@@ -38,6 +32,11 @@ getKey_GBIF <- function(){
     print(name_suggest(q = species[i], rank = 'species')$data)
     message('')
   }
+  
+  ## Provide user credentials for GBIF
+  options(gbif_user = rstudioapi::askForPassword("GBIF username"))
+  options(gbif_email = rstudioapi::askForPassword("Registered GBIF e-mail"))
+  options(gbif_pwd = rstudioapi::askForPassword("GBIF password"))
   
   ## Get download key for all occurrences of plants with coordinates in Norway
   download_key <- 

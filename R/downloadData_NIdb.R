@@ -24,7 +24,7 @@
 #'
 #' @examples
 #' 
-downloadData_NIdb <- function(species, indicators, save = FALSE){
+downloadData_NIdb <- function(species, indicators, save = FALSE, save_path){
 
   ## Provide user credentials for NI database and request token
   UserName_NIdb <- rstudioapi::askForPassword("NI database username") # = NINA email address
@@ -49,7 +49,7 @@ downloadData_NIdb <- function(species, indicators, save = FALSE){
   
   ## Save indicator data (optional)
   if(save){
-    save(oldIndicatorData, file = "oldIndicatorData.RData")
+    saveRDS(oldIndicatorData, file = paste0(save_path, "/oldIndicatorData.rds"))
   }
 
   ## Return indicator data
