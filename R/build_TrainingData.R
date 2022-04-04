@@ -11,14 +11,15 @@
 #' @param max.year Integer. Latest year to include in training dataset. 
 #' @param year.interval Integer. Length of the time interval (number of years) for which 
 #' to rasterize occurrence data. 
+#' @param save.path Character string indicating the directory in which training 
+#' should be saved. 
 #' @param save.unfiltered Logical, default = `FALSE`. If `TRUE`, unfiltered 
 #' raster data on occurrence and sampling is saved in the subfolder Data/Raster.
 #'
 #' @return None
 #' @export
-#' @export
  
-build_TrainingData <- function(GBIF_data, species, min.year, max.year, year.interval, save.unfiltered = FALSE){
+build_TrainingData <- function(GBIF_data, species, min.year, max.year, year.interval, save_path, save.unfiltered = FALSE){
   
   # SUBSETTING AND COORDINATE REFORMATTING #
   #----------------------------------------#
@@ -26,19 +27,24 @@ build_TrainingData <- function(GBIF_data, species, min.year, max.year, year.inte
   ## Select relevant fields
   # Only species, geographical coordinates (with uncertainty/precision) and time (year, month, day) are
   # needed for the modelling, but other fields may be useful for error checking etc.
-  selectedFields <- c( "institutionID", "collectionID", "catalogNumber",
+  selectedFields <- c( "gbifID", "institutionID", "collectionID", "catalogNumber",
                        "basisOfRecord", "contributor",
-                       "species", "scientificName", "taxonID", "taxonKey",
+                       "species", "scientificName", "taxonID", 
+                       "taxonKey", "acceptedTaxonKey", "speciesKey",
                        "year", "month", "day",
                        "countryCode", "county", "municipality",
                        "decimalLongitude", "decimalLatitude", 
-                       "coordinateUncertaintyInMeters", "coordinatePrecision") 
+                       "coordinateUncertaintyInMeters", "coordinatePrecision",
+                       "occurrenceStatus") 
   
   GBIF_data <- GBIF_data[, selectedFields]
   
   ## Remove observations with missing dates and/or coordinates 
   # NOTE: shouldn't be necessary when "has coordinate" = TRUE, but quite a few long and lat are missing
   GBIF_data <- GBIF_data[complete.cases(GBIF_data[, c("year", "month", "day", "decimalLongitude", "decimalLatitude")]), ]
+  
+  ## Remove all recorded absences
+  GBIF_data <- subset(GBIF_data, occurrenceStatus == 'PRESENT')
   
   ## Convert lat-long coordinates to coordinate system of Norway raster
   occ_points <- data.frame(x = GBIF_data$decimalLongitude, y = GBIF_data$decimalLatitude)
@@ -64,14 +70,14 @@ build_TrainingData <- function(GBIF_data, species, min.year, max.year, year.inte
   
   ## Load background raster for Norway
   # NOTE: All values = 1
-  norway <- raster("Data/Raster/Norway.tif")  
+  norway <- raster(paste0(save_path, "Norway.tif"))  
   
   ## Rasterize sampling effort in time intervals
   samp_ras <- stack(norway)
   
   for(i in 1:length(start.year)){
     print(start.year[i])
-    records.in.interval <- (occ_UTM33$year >= start.year[i]) & (occ_UTM33$year < start.year[i]+5)
+    records.in.interval <- (occ_UTM33$year >= start.year[i]) & (occ_UTM33$year < start.year[i]+year.interval)
     print(table(records.in.interval))
     if(!any(records.in.interval)) samp_ras[[i]] <- norway*0
     else samp_ras[[i]] <- norway*rasterize(occ_UTM33[records.in.interval,], norway, field="year_month_day", fun=function(x,...){length(unique(x))}, background=0) # raster with counts of sampling effort in each cell of norway
@@ -82,9 +88,11 @@ build_TrainingData <- function(GBIF_data, species, min.year, max.year, year.inte
   occ_ras_list <- list()
 
   for(j in 1:length(species)){
-    key <- name_suggest(q = species[j], rank = 'species')$data$key
-    occ_species <- occ_UTM33[occ_UTM33$taxonKey%in%key,]
-    cat(species[j], nrow(occ_species),"\n")
+    focal_species <- species[j]
+    
+    key <- name_suggest(q = focal_species, rank = 'species')$data$key
+    occ_species <- subset(occ_UTM33, taxonKey %in% key | acceptedTaxonKey %in% key | species == focal_species)
+    cat(focal_species, nrow(occ_species),"\n")
     occ_ras_list[[j]] <- stack(norway)
     for(i in 1:length(start.year)){
       records.in.interval <- (occ_species$year >= start.year[i]) & (occ_species$year < start.year[i] + year.interval)
@@ -98,8 +106,8 @@ build_TrainingData <- function(GBIF_data, species, min.year, max.year, year.inte
   
   ## Save unfiltered data (optional)
   if(save.unfiltered){
-    save(samp_ras, file = "Data/Raster/samp_ras_all.RData")  
-    save(occ_ras_list, file = "Data/Raster/occ_ras_list_all.RData")
+    saveRDS(samp_ras, file = paste0(save_path, "samp_ras_all.rds"))  
+    saveRDS(occ_ras_list, file = paste0(save_path, "occ_ras_list_all.rds"))
   }
   
   # Removing no longer required objects
@@ -153,7 +161,7 @@ build_TrainingData <- function(GBIF_data, species, min.year, max.year, year.inte
     # training_data$geonorge123 <- factor(training_data$geonorge123)
     
     # Save training data
-    save(training_data, file = paste("Data/Regression data/", species[j], "_training_data_all.RData", sep = ""))
+    saveRDS(training_data, file = paste0(save_path, species[j], "_training_data_all.rds"))
   }
   
 }
