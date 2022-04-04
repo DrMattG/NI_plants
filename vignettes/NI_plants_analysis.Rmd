@@ -1,5 +1,5 @@
 ---
-title: "NI_plants_analysis"
+title: "Vascular plants analysis for NI"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{NI_plants_analysis}
@@ -14,12 +14,22 @@ knitr::opts_chunk$set(
 )
 ```
 
-## Load required packages
+This vignette documents the workflow for downloading and analysing occurrence data for 17 species of vascular plants across Norway, and subsequently using the results to calculate spatially-explicit indicator values to enter into the Nature Index (NI) database. 
 
-```{r setup}
+Code contained within the `NIplants` package, as well as the Workflow outlined in this vignette, are adapted from scripts by Olav Skarpaas: https://github.com/skarpaas/NI2020-plants
+A summary of changes that have been made relative to the source material is provided in Appendix 1 at the end of the vignette. 
+
+For more information on the modelling framework and its assumptions and compromises, as well as a discussion of results from a biological viewpoint, refer to original documentation by Olav Skarpaas: https://github.com/skarpaas/NI2020-plants/blob/main/NI-2020-plants-report.docx
+
+
+## General setup
+
+### Installing and loading packages 
+
+We start by loading all required packages. This includes both `NIplants` and its dependencies: 
+
+```{r setup, message = FALSE, warning = FALSE, eval = FALSE}
 library(NIplants)
-# NIcalc package for reading/writing to NI database
-#devtools::install_github("NINAnor/NIcalc", build_vignettes = T)
 library(NIcalc)
 library(magrittr)
 library(rgbif)
@@ -30,148 +40,228 @@ library(rio)
 library(mgcv)
 ```
 
-## Set species and indicator names & check that they correspond
+Install and/or update packages as needed. 
+The up-to-date version of the `NIplants` package has to be installed from GitHub as it is not on CRAN (yet):
 
-```{r}
+```{r, eval = FALSE}
+devtools::install_github("DrMattG/NI_plants", ref = "InProgress_CRN")
+```
+
+### Setting paths and directories
+
+Next, we define the paths to the analysis directory (`analysis_path`) and and the directory to store the raw data (`data_path`). Note that the paths will be different depending on whether one runs the analysis from a local computer or NINA's RStudio server.   
+```{r, eval = FALSE}
+# Run locally
+analysis_path <- "P:/41201612_naturindeks_2021_2023_database_og_innsynslosning/Karplanter_Dataflyt/NI2025_plants"
+data_path <- "P:/41201612_naturindeks_2021_2023_database_og_innsynslosning/Karplanter_Dataflyt/GBIF_Data" # Local
+
+# Run from server
+#analysis_path <- "/data/P-Prosjekter/41201612_naturindeks_2021_2023_database_og_innsynslosning/Karplanter_Dataflyt/NI2025_plants"
+#data_path <- "/data/P-Prosjekter/41201612_naturindeks_2021_2023_database_og_innsynslosning/Karplanter_Dataflyt/GBIF_Data"
+```
+We then proceed to make sure that the analysis directory  contains two sub-folders named "Data" and "Results". 
+```{r, eval = FALSE}
+if(!dir.exists(paste0(analysis_path, "/Data"))){
+  dir.create(paste0(analysis_path, "/Data"))
+}
+if(!dir.exists(paste0(analysis_path, "/Results"))){
+  dir.create(paste0(analysis_path, "/Results"))
+}
+```
+
+### Defining species to include in analyses
+As per now, this analysis includes 17 species of vascular plants found in Norway. We define them via both their Norwegian names (used in the NI database, `indicators`) and their latin names (`species`).
+
+```{r, eval = FALSE}
 indicators <- c("Alm","Fjellvalmue","Greplyng","Issoleie","Kusymre","Myrtelg","Olavsstake","Prestekrage",
                 "Purpurlyng","Sennegras","Solblom","Sveltstarr","Engmarihand","Hvitmyrak","Brunmyrak","Smalsoldogg","Dikesoldogg")
+
 species <- c("Ulmus glabra","Papaver radicatum","Kalmia procumbens","Ranunculus glacialis","Primula vulgaris",
              "Thelypteris palustris","Moneses uniflora","Leucanthemum vulgare","Erica cinerea","Carex vesicaria",
              "Arnica montana","Carex pauciflora","Dactylorhiza incarnata","Rhynchospora alba","Rhynchospora fusca",
              "Drosera anglica","Drosera intermedia")
-
-length(indicators) == length(species)
-
 ```
 
 
-## Set "switches" for executing different steps of the workflow
+### Setting "switches" for executing different steps of the workflow
+This workflow as a whole takes a long time to run, and one may not always want to (re-)run all the different steps. To enable skipping of steps we do not want to run/repeat, we define a set of logical "switches". If a certain switch is set to `FALSE`, the corresponding step of the workflow will be skipped.
 
+```{r, eval = FALSE}
 
-```{r}
+# Step 1: Downloading old NI data
+#downloadOldNIData <- TRUE
 downloadOldNIData <- FALSE
-downloadGBIFData <- FALSE
-#------------------------------------------------------------#
-# Retrieve old indicator data from NI database or local save #
-#------------------------------------------------------------#
 
-if(downloadOldNIData){
+# Step 2: Downloading raw occurrence data from GBIF
+#downloadGBIFData <- TRUE
+downloadGBIFData <- FALSE
+
+# Step 3: Building training datasets for model fitting
+#buildTrainingData <- TRUE
+buildTrainingData <- FALSE
+
+# Step 4: Fitting GAMs
+#fitGAM <- TRUE
+fitGAM <- FALSE
+
+# Step 5: Making GAM predictions
+#predictGAM <- TRUE
+predictGAM <- FALSE
+
+# Step 6: Calculating indicator values
+#calcIndicators <- TRUE
+calcIndicators <- FALSE
+
+# Step 7: Formatting indicator values
+#formatIndicators <- TRUE
+formatIndicators <- FALSE
+
+# Step 8: Comparing new indicator values to old and/or upload to NI database
+#processIndicators <- TRUE
+processIndicators <- FALSE
+```
+
+## Retrieving old indicator data from NI database or local save 
+
+We may want to start a new analysis by downloading and inspecting the indicator values that were previously uploaded to the NI database. 
+`NI_plants::downloadData_NIdb()` allows to download the most recent indicator entries from the NI database. The function will ask for the user's NI database credentials (registered email address and a password).
+If we have previously downloaded the old NI data and do not wish to repeat this step (`downloadOldNIData == FALSE`), we instead load a previously saved version of the data: 
+```{r, eval = FALSE}
+if(downloadOldNIData, eval = FALSE){
   
-  ## Execute function for downloading old indicator data
-  oldIndicatorData <- downloadData_NIdb(species = species, indicators = indicators, save = TRUE)
+  # Execute function for downloading old indicator data
+  oldIndicatorData <- downloadData_NIdb(species = species, indicators = indicators, 
+                                        save = TRUE, save_path = paste0(analysis_path, "/Data"))
 
 }else{
   
-  ## Load old indicator data from local save
-  load('oldIndicatorData.RData')
+  # Load old indicator data from local save
+  oldIndicatorData <- readRDS(paste0(analysis_path, '/Data/oldIndicatorData.rds'))
 }
+```
 
-#------------------------------------------------------#
-# Retrieve raw occurrence data from GBIF or local save #
-#------------------------------------------------------#
+## Retrieving raw occurrence data from GBIF or local save 
 
-## Execute function for setting up download key and requesting download
+The vascular plant indicators are based on occurrence data downloaded from GBIF. To get data from GBIF, one first needs to request a data download via a key. The function `NI_plants::getKey_GBIF()` takes care of that. It first extracts and prints all taxon keys relevant to the species listed in `species`, then asks for your GBIF login credentials, and finally proceeds to request a download. 
+```{r, eval = FALSE}
+# Execute function for setting up download key and requesting download
 if(downloadGBIFData){
  download_key <- getKey_GBIF()
  message("Download key retrieved.")
  message("Wait until your GBIF download is ready (typically within 15 minutes, but can take up to 3 hours).")
  message("You should receive an email confirmation once the download is ready.")
 }
-
-## Set path for storing raw GBIF data
-path <- "/data/P-Prosjekter/41201612_naturindeks_2021_2023_database_og_innsynslosning/Karplanter_Dataflyt/GBIF_Data" # Server
-#path <- "P:/41201612_naturindeks_2021_2023_database_og_innsynslosning/Karplanter_Dataflyt/GBIF_Data" # Local
-
+```
+Once the GBIF download is ready, we use `NI_plants::downloadGBIFData` to download the occurrence data into the directory we set previously (`data_path`). The function also unzips the raw data file (`occurrence.txt`) and moves it back where it belongs (i.e. in the data directory).
+```{r, eval = FALSE}
 if(downloadGBIFData){
   
-  ## Execute function to download, unzip, and import raw data (using generated key)
-  sp <- downloadData_GBIF(key = download_key$key, path = path)
+  # Execute function to download, unzip, and import raw data (using generated key)
+  sp <- downloadData_GBIF(key = download_key$key, path = data_path)
   
-  ## Move file from working directory into GBIF data folder
-  fs::file_move("occurrence.txt", paste0(path, "/occurrence.txt"))
+  # Move file from working directory into GBIF data folder
+  fs::file_move("occurrence.txt", paste0(data_path, "/occurrence.txt"))
   
 }
   
-## Import raw data from previously downloaded occurrence file
-GBIF_data <- import(paste0(path, "/occurrence.txt"), header = T, sep = "\t")
+# Import raw data from previously downloaded occurrence file
+GBIF_data <- import(paste0(data_path, "/occurrence.txt"), header = T, sep = "\t")
 
 ```
+Note that `NI_plants::downloadGBIFData` also writes a .txt file named "GBIF_Data_Citation.txt" into the data directory. This file contains citation information for the dataset. 
 
-#--------------------------------------------#
-# Build training data for each focal species #
-#--------------------------------------------#
-```{r}
-## Set start, end, and year interval for time period of interest
+## Building training data for each focal species 
+
+Once we have the raw data ready, it needs to be filtered and re-formatted into species-specific training datasets on which we run the GAMs. The corresponding function `NI_plants::build_TrainingData` requires us to set the first and last year(`min.year` and `max.year`), as well as the time interval (`year.interval`), to consider. The time interval is set to 5 years since NI is calculated every 5 years. `NI_plants::build_TrainingData` then adds up all occurrences (presences only) contained within the time interval and assigns them to the starting year. 
+```{r, results = FALSE, eval = FALSE}
+# Set start, end, and year interval for time period of interest
 min.year <- 1820
 max.year <- 2020
 year.interval <- 5
 
-## Execute function for building training data
-build_TrainingData(GBIF_data, species, min.year, max.year, year.interval, save.unfiltered = TRUE)
-
-## Declutter workspace
-rm(list = setdiff(ls(), 'species'))
-
+# Execute function for building training data
+if(buildTrainingData){
+  build_TrainingData(GBIF_data, species, min.year, max.year, year.interval, 
+                     save_path = paste0(analysis_path, "/Data/"), save.unfiltered = TRUE)
+}
 ```
 
 
-#------------------------#
-# Analyse data with GAMs #
-#------------------------#
-```{r}
-## Execute function to run GAM analyses
-gam.results <- run_GAM(species = species, save = TRUE)
 
+## Analysing data with GAMs 
+
+Next, we analyse each training dataset with a Generalized Additive Model (GAM). `NI_plants::run_GAM()` fits a Poisson GAM with additive effects of latitude, longitude, and date, as well as interactive effects of date with latitude and longitude, to the time-series of occurrence counts contained in the training data. An offset is used to account for imperfect detectability (see the original documentation by Olav Skarpaas for more details: https://github.com/skarpaas/NI2020-plants/blob/main/NI-2020-plants-report.docx)
+```{r, eval = FALSE}
+# Execute function to run GAM analyses
+if(fitGAM){
+  gam.results <- run_GAM(species = species, data_path = paste0(analysis_path, "/Data"), 
+                         save = TRUE, save_path = paste0(analysis_path, "/Results"))
+}
 ```
 
-#------------------------------------#
-# Make spatial predictions from GAMs #
-#------------------------------------#
-```{r}
-## Make a list of years for which to make predictions
+
+## Making spatial predictions from GAMs
+The vascular plant indicators in NI are based off spatially explicit predictions from the GAMs fit with `NI_plants::run_GAM()`. These predictions are made by the function `NI_plants::predict_GAM()` for a selected number of years (specified in the argument `yearList`). As a minimum, predictions need to be made for the reference year (1900) and each year for which NI will be calculated (1990, 2000, 2010, 2014. 2019, etc.). The function also has a plotting option: if `plot.pdf = TRUE`, then a map of predicted occurrences (proxy for abundance) will be plotted for each species and year and saved as a pdf. 
+Be aware that this is the most computationally intensive part of the workflow. It takes several days to run, and using a cluster or RStudio server is recommended (make sure you adjust the paths if necessary before running). 
+```{r, eval = FALSE}
+# Make a list of years for which to make predictions
 yearList <- c(1900, 1950, 1990, 2000, 2010, 2014, 2019)
 
-## Execute function to predict from GAMs and plot predictions (optional)
-NIGAM_All.list <- predict_GAM(species = species, year = yearList, plot.pdf = TRUE, save = TRUE)
-
+# Execute function to predict from GAMs and plot predictions (optional)
+if(predictGAM){
+  NIGAM_All.list <- predict_GAM(species = species, year = yearList, plot.pdf = TRUE, 
+                                save = TRUE, wd_path = analysis_path)
+}
 ```
 
 
-
-#---------------------------------------------------#
-# Calculate indicator values from model predictions #
-#---------------------------------------------------#
-
-```{r}
-## Execute function to calculate indicator values
-newIndicatorData <- calculate_IndicatorValues(species = species, year = yearList, save = TRUE)
-
+## Calculating indicator values from model predictions
+Calculation of the indicator values for vascular plants involves calibrating the abundance predictions relative to an a-priori set reference value, and subsequently scaling them to the spatial resolution appropriate for entering into the the NI database. This process can be done using `NI_plants::calculate_IndicatorValues`.
+At present -- and consistent with previous iterations of NI -- predicted abundance in year 1900 is treated as the reference value. However, this will likely be changed prior to the implementation of NI2025. 
+```{r, eval = FALSE}
+# Execute function to calculate indicator values
+if(calcIndicators){
+  newIndicatorData <- calculate_IndicatorValues(species = species, year = yearList, 
+                                                save = TRUE, wd_path = analysis_path)
+}
 ```
 
 
-
-#-----------------------------------------------------------------------#
-# Create distribution objects and format data for import to NI database #
-#-----------------------------------------------------------------------#
-```{r}
-## Execute function to create and format distribution object data
-updatedIndicatorData <- create_DistObjects(species = species, save = TRUE)
-
+## Formatting data for import to NI database 
+Each individual indicator value should have a measure of uncertainty. Our indicator values here get an estimate of uncertainty from the modelling procedure (GAM fitting), but this has to be expressed in a format that is compatible with the NI database. `NI_plants::create_DistObjects()` therefore transforms our new indicator data (`newIndicatorData`) into distribution objects that can be uploaded to the NI database using the functionalities of the `NIcalc` package. 
+```{r, eval = FALSE}
+# Execute function to create and format distribution object data
+if(formatIndicators){
+  updatedIndicatorData <- create_DistObjects(species = species, save = TRUE, wd_path = analysis_path)
+}
 ```
 
 
+## Comparing updated indicator data and uploading to NI database 
+The final step of the workflow is double-checking our new indicator data and subsequently uploading it to the NI database. Both of these tasks are handled by `NI_plants::uploadData_NIdb` and are initiated separately depending on the function's `mode` argument. If we set `mode = "compare"`, `NI_plants::uploadData_NIdb` connects to the NI database (requires your credentials), downloads the latest version of the indicator data stored there, and compares that data to the newly calculated indicator data on a per-species basis by calculating the ratio of the old and new indicator value (as old/new). It then returns a summary of the comparison containing means and percentiles of the relative change in indicator values.  
+```{r, eval = FALSE}
+# Exectue function to compare updated indicator data to previous
+if(processIndicators){
+  uploadData_NIdb(species = species, speciesList = species, mode = "compare", newdata_path = paste0(analysis_path, "/Data"))
+}
+```
 
-#----------------------------------------------------------#
-# Compare updated indicator data and upload to NI database #
-#----------------------------------------------------------#
-```{r}
-## Exectue function to compare updated indicator data to previous
-uploadData_NIdb(species = species, speciesList = species, mode = "compare")
-## Exectue function to write updated indicator data to NI database
-#uploadData_NIdb(species = species, speciesList = species, mode = "overwrite")
+Once we have compared and are satisfied with our newly calculated indicator data, we can upload it to the NI database by setting `mode = "overwrite"` in `NI_plants::uploadData_NIdb`. Note that doing this will overwrite the data currently contained in the database, and should only be done when everything has been double-checked and confirmed to be ready. After entering your credentials, you will also be prompted to confirm that you intend to overwrite data.
 
-
+```{r, eval = FALSE}
+# Execute function to write updated indicator data to NI database
+if(processIndicators){
+  uploadData_NIdb(species = species, speciesList = species, mode = "overwrite", , newdata_path = paste0(analysis_path, "/Data"))
+}
 ```
 
 
+## Appendix 1: Changes in workflow and code relative to source material
 
+Relative to the source material provided by Olav Skarpaas (https://github.com/skarpaas/NI2020-plants), the following adaptations and changes have been made to code and workflow: 
+
+  * All scripts have been collected and re-organised into an R package (`NI_plants`)
+  * Function calls and operations in all scripts have been adapted/udated for compatibility with recent versions of R package dependencies
+  * The download query to GBIF has been altered to improve efficiency. Instead of downloading occurrences for ALL plant species in Norway, the function `downloadData_GBIF` now only downloads data for the relevant species. This avoids problems with unzipping data files > 4GB and reduces memory requirements during processing. 
+  * For assembling data sets for model fitting (function `build_TrainingData`), filtering is now done under consideration of the variables `species` and `acceptedTaxonKey` in additon to `taxonKey`. This avoids the dropping of records for certain subspecies and species that changed name. 
+  * Datasets for fitting models are now built based on recorded presences only. Recorded absences contained in the GBIF data (`occurrenceType == "ABSENCE"`) are dropped when preparing datasets (function `build_TrainingData`). 
