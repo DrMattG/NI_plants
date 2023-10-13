@@ -35,6 +35,7 @@ downloadData_NIdb <- function(species, indicators, save = FALSE, save_path){
   ## Get token
   NIcalc::getToken(username = UserName_NIdb,  
                    password = Password_NIdb,
+                   #url = "https://www8.nina.no/Naturindeks_test",
                    url = "https://www8.nina.no/NaturindeksNiCalc")
   
   ## Specify indicators for which to download data
