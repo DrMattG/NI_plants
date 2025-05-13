@@ -61,8 +61,7 @@ uploadData_NIdb <- function(species, speciesList, mode, newdata_path){
   
   NIcalc::getToken(username = myUserName_NIdb,  
                    password = myPassword_NIdb,
-                   url = "https://www8.nina.no/NaturindeksAPITest"
-                   #url = "https://www8.nina.no/NaturindeksNiCalc"
+                   url = "https://www8.nina.no/NaturindeksNiCalc"
                    )
   
   ## Write updated indicator data into NI database
