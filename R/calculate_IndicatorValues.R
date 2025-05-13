@@ -9,6 +9,7 @@
 #' @param species character string or vector of character strings containing
 #' the latin name of the species for which to calculate indicator values
 #' @param year vector of years for which to calculate indicator values
+#' @param referenceYear integer. Year to use as reference.
 #' @param save logical, default = `FALSE`. If `TRUE`, new indicator data will be
 #' saved in the working directory as `newIndicatorData.RData`.
 #'@param wd_path Character string specifying the working directory containing 
@@ -20,7 +21,9 @@
 #' @export
 #'
 #' @examples
-calculate_IndicatorValues <- function(species, year, save = FALSE, wd_path){
+calculate_IndicatorValues <- function(species, year, 
+                                      referenceYear,
+                                      save = FALSE, wd_path){
   
   ## Load saved data if not present
   

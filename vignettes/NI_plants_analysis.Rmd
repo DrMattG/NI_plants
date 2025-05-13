@@ -222,6 +222,7 @@ At present -- and consistent with previous iterations of NI -- predicted abundan
 # Execute function to calculate indicator values
 if(calcIndicators){
   newIndicatorData <- calculate_IndicatorValues(species = species, year = yearList, 
+                                                referenceYear = 1900,
                                                 save = TRUE, wd_path = analysis_path)
 }
 ```
