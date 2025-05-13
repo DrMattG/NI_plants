@@ -110,9 +110,13 @@ uploadData_NIdb <- function(species, speciesList, mode, newdata_path){
         dplyr::rename(verdi_old = verdi)
       
       check_all <- dplyr::inner_join(d1, d2, by = c("areaName", "yearName")) %>%
-        dplyr::mutate(check = verdi_old/verdi_new)
+        dplyr::filter(!is.na(verdi_old) & !is.na(verdi_new)) %>%
+        dplyr::mutate(propDiff = verdi_old/verdi_new)
+
+      message("Proportional difference in values:")
+      print(summary(check_all$propDiff))
+      message(paste0("Correlation coefficient: ", round(cor(check_all$verdi_new, check_all$verdi_old), digits = 3)))
       
-      print(summary(check_all$check))
     }
   }
 }
