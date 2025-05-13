@@ -63,11 +63,11 @@ predict_GAM <- function(species, year, plot.pdf = TRUE, save = FALSE, wd_path){
       b <- seq(0, 0.1, by = 0.001)
       n <- length(b)
       
-      if(plot.pdf){
-        plot(p.poly, col = rev(terrain.colors(n-1))[raster::cut(p.poly$Norway, breaks = b)], main = paste(species[j], year[i]))
-        plotList[[i]] <- recordPlot()
-        graphics.off()
-      }
+      #if(plot.pdf){
+      #  plot(p.poly, col = rev(terrain.colors(n-1))[raster::cut(p.poly$Norway, breaks = b)], main = paste(species[j], year[i]))
+      #  plotList[[i]] <- recordPlot()
+      #  graphics.off()
+      #}
       
       values(p) <- as.vector(pred$se.fit)
       p.poly.se <- raster::extract(p, kommune.poly, sp = TRUE, fun = mean, na.rm = T, weights = TRUE, normalizeWeights = TRUE)
@@ -75,12 +75,35 @@ predict_GAM <- function(species, year, plot.pdf = TRUE, save = FALSE, wd_path){
     }
     
     if(plot.pdf){
-      message(paste0("Assembling pdf plot for ", species[j], "."))
-      pdf(paste0(wd_path, "/Results/GAMplotsMunic_", species[j], ".pdf"), onefile = TRUE)
-      for (plotList in plotList) {
-        replayPlot(plotList)
+      
+      maxPred <- rep(NA, length(year))
+      
+      for(i in 1:length(year)){
+        maxPred[i] <- max(NIGAM_All.list[[j]][[i]]$p$Norway)
       }
-      graphics.off()
+      
+      plotLim <- ifelse(round(max(maxPred), digits = 1) < max(maxPred), 
+                        round(max(maxPred), digits = 1) + 0.1, round(max(maxPred), digits = 1))
+      
+      message(paste0("Assembling pdf plot for ", species[j], "."))
+      pdf(paste0(wd_path, "/Results/GAMplotsMunic_", species[j], ".pdf"))
+      
+      for(i in 1:length(year)){
+        p.poly <- NIGAM_All.list[[j]][[i]]$p
+        
+        print(
+          tmap::tm_shape(p.poly) + 
+            tmap::tm_polygons("Norway", 
+                              title = paste0("Prediction (year ", year[i], ")"),
+                              n = 10,
+                              breaks = seq(0, plotLim, length.out = 10),
+                              #style = "cont",
+                              palette = rev("BuGn"), 
+                              colorNA = "grey80") +
+            tm_layout(legend.outside = TRUE)
+        )
+      }
+      dev.off()
     }
   }
   

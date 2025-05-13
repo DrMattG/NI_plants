@@ -30,20 +30,21 @@ calculate_IndicatorValues <- function(species, year,
   # Old indicator data
   if(!exists("oldIndicatorData")){
     oldIndicatorData <- readRDS(paste0(wd_path, "/Data/oldIndicatorData.rds"))
-    message('Old indicator data loaded from file.')
+    message('oldIndicatorData loaded from file.')
+  }else{
+    message('Using oldIndicatorData from workspace.')
   }
   
   # GAM predictions
   if(!exists("NIGAM_All.list")){
     NIGAM_All.list <- readRDS(paste0(wd_path, "/Results/NIGAM_All.list.rds"))
-    message('GAM prediction data loaded from file.')
+    message('GAM prediction data (NIGAM_All.list) loaded from file.')
+  }else{
+    message('Using GAM prediction data (NIGAM_All.list) from workspace.')
   }
   
   ## Set up structure for new indicator data from old
   newIndicatorData <- oldIndicatorData
-  
-  ## Set reference year
-  referenceYear <- 1900
   
   ## Calculate indicator values for each species and year
   message("Calculating indicator values for:")
@@ -58,6 +59,7 @@ calculate_IndicatorValues <- function(species, year,
     ind_areas <- old %>%
       dplyr::distinct(indicatorId, indicatorName, 
                       areaId, areaName)
+    
     new_ref <- ind_areas %>%
       dplyr::mutate(yearId = 0,
                     yearName = "Referanseverdi")
