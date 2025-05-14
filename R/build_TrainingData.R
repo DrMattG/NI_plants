@@ -28,7 +28,7 @@ build_TrainingData <- function(GBIF_data, species, min.year, max.year, year.inte
   # Only species, geographical coordinates (with uncertainty/precision) and time (year, month, day) are
   # needed for the modelling, but other fields may be useful for error checking etc.
   selectedFields <- c( "gbifID", "institutionID", "collectionID", "catalogNumber",
-                       "basisOfRecord", "contributor",
+                       "basisOfRecord",
                        "species", "scientificName", "taxonID", 
                        "taxonKey", "acceptedTaxonKey", "speciesKey",
                        "year", "month", "day",

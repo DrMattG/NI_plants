@@ -21,13 +21,6 @@ create_DistObjects <- function(species, save = FALSE, wd_path){
   
   ## Load saved data if not present
   
-  # Old indicator data
-  if(!exists("oldIndicatorData")){
-    oldIndicatorData <- readRDS(paste0(wd_path, "/Data/oldIndicatorData.rds"))
-    message('Old indicator data loaded from file.')
-  }
-  
-  
   # New indicator data
   if(!exists("newIndicatorData")){
     newIndicatorData <- readRDS(paste0(wd_path, "/Data/oldIndicatorData.rds"))
@@ -35,7 +28,7 @@ create_DistObjects <- function(species, save = FALSE, wd_path){
   }
   
   ## Set up structure for updated indicator data
-  updatedIndicatorData <- oldIndicatorData
+  updatedIndicatorData <- newIndicatorData
   
   message("Assembling updated NI data for:")
   
@@ -87,7 +80,20 @@ create_DistObjects <- function(species, save = FALSE, wd_path){
                                                               distribution = myData$distrObjects[[i]],
                                                               datatype = myData$Datatype[i])
     } 
+    
+    ## Tidy up columns
+    updatedIndicatorData[[j]]$indicatorValues <- updatedIndicatorData[[j]]$indicatorValues %>%
+      dplyr::select(-verdiSE, -ref) %>%
+      dplyr::select(indicatorId, indicatorName, areaId, areaName,
+                    yearId, yearName, 
+                    verdi, nedre_Kvartil, ovre_Kvartil, 
+                    datatypeId, datatypeName, 
+                    unitOfMeasurement, customDistributionUUID,
+                    distributionName, distributionId,
+                    distParam1, distParam2)
   }
+  
+
   
   ## Save updated indicator data (optional)
   if(save){

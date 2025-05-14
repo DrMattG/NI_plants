@@ -127,7 +127,7 @@ We may want to start a new analysis by downloading and inspecting the indicator 
 `NI_plants::downloadData_NIdb()` allows to download the most recent indicator entries from the NI database. The function will ask for the user's NI database credentials (registered email address and a password).
 If we have previously downloaded the old NI data and do not wish to repeat this step (`downloadOldNIData == FALSE`), we instead load a previously saved version of the data: 
 ```{r, eval = FALSE}
-if(downloadOldNIData, eval = FALSE){
+if(downloadOldNIData){
   
   # Execute function for downloading old indicator data
   oldIndicatorData <- downloadData_NIdb(species = species, indicators = indicators, 
@@ -222,6 +222,7 @@ At present -- and consistent with previous iterations of NI -- predicted abundan
 # Execute function to calculate indicator values
 if(calcIndicators){
   newIndicatorData <- calculate_IndicatorValues(species = species, year = yearList, 
+                                                referenceYear = 1900,
                                                 save = TRUE, wd_path = analysis_path)
 }
 ```

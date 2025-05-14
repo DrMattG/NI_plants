@@ -61,7 +61,8 @@ uploadData_NIdb <- function(species, speciesList, mode, newdata_path){
   
   NIcalc::getToken(username = myUserName_NIdb,  
                    password = myPassword_NIdb,
-                   url = "https://www8.nina.no/NaturindeksNiCalc")#source('species.r')
+                   url = "https://www8.nina.no/NaturindeksNiCalc"
+                   )
   
   ## Write updated indicator data into NI database
   if(mode == "overwrite"){
@@ -76,7 +77,9 @@ uploadData_NIdb <- function(species, speciesList, mode, newdata_path){
       
       for(j in 1:length(species)){
         message(species[j])
-        NIcalc::writeIndicatorValues(updatedIndicatorData[[j]])
+        #NIcalc::writeIndicatorValues(updatedIndicatorData[[j]])
+        writeIndicatorValues(updatedIndicatorData[[j]])
+        
       }  
     }else{
       message("Function halted.")
@@ -97,12 +100,23 @@ uploadData_NIdb <- function(species, speciesList, mode, newdata_path){
       message("")
       message(paste0("Change in indicator values for ", species[j], ":"))
       
-      d1 <- updatedIndicatorData[[j]]$indicatorValues
+      d1 <- updatedIndicatorData[[j]]$indicatorValues %>%
+        dplyr::select(areaName, yearName, verdi) %>%
+        dplyr::rename(verdi_new = verdi)
+      
       indicatorData <- NIcalc::getIndicatorValues(indicatorID = myIndicators$id[myIndicators$species==species[j]]) 
-      d2 <- indicatorData$indicatorValues
-      check_all <- data.frame(d1$verdi, d2$verdi)
-      check_all$check <- check_all[,2]/check_all[,1]
-      print(summary(check_all$check))
+      d2 <- indicatorData$indicatorValues %>%
+        dplyr::select(areaName, yearName, verdi) %>%
+        dplyr::rename(verdi_old = verdi)
+      
+      check_all <- dplyr::inner_join(d1, d2, by = c("areaName", "yearName")) %>%
+        dplyr::filter(!is.na(verdi_old) & !is.na(verdi_new)) %>%
+        dplyr::mutate(propDiff = verdi_old/verdi_new)
+
+      message("Proportional difference in values:")
+      print(summary(check_all$propDiff))
+      message(paste0("Correlation coefficient: ", round(cor(check_all$verdi_new, check_all$verdi_old), digits = 3)))
+      
     }
   }
 }
